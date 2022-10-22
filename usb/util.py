@@ -185,11 +185,10 @@ def find_descriptor(desc, find_all=False, custom_match=None, **args):
 
     if find_all:
         return desc_iter(**args)
-    else:
-        try:
-            return _interop._next(desc_iter(**args))
-        except StopIteration:
-            return None
+    try:
+        return _interop._next(desc_iter(**args))
+    except StopIteration:
+        return None
 
 def claim_interface(device, interface):
     r"""Explicitly claim an interface.
@@ -304,13 +303,13 @@ def get_string(dev, index, langid = None):
     device's langid tuple is empty, or with an explicit langid the device does
     not support.
     """
-    if 0 == index:
+    if index == 0:
         return None
 
     from usb.control import get_descriptor
     langids = dev.langids
 
-    if 0 == len(langids):
+    if len(langids) == 0:
         raise ValueError("The device has no langid")
     if langid is None:
         langid = langids[0]

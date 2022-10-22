@@ -39,13 +39,16 @@ AES_UID_KEY     = 0x20000201
 class PwnedUSBDevice():
   def memset(self, address, c, length):          self.command(self.cmd_memset(address, c, length), 0)
   def memcpy(self, dest, src, length):           self.command(self.cmd_memcpy(dest, src, length), 0)
-  def read_memory_ptr(self, address):            return struct.unpack('<%s' % self.cmd_arg_type(), self.read_memory(address, self.cmd_arg_size()))[0]
+  def read_memory_ptr(self, address):
+    return struct.unpack(f'<{self.cmd_arg_type()}',
+                         self.read_memory(address, self.cmd_arg_size()))[0]
   def read_memory_uint8(self, address):          return struct.unpack('<B', self.read_memory(address, 1))[0]
   def read_memory_uint16(self, address):         return struct.unpack('<H', self.read_memory(address, 2))[0]
   def read_memory_uint32(self, address):         return struct.unpack('<I', self.read_memory(address, 4))[0]
   def read_memory_uint64(self, address):         return struct.unpack('<Q', self.read_memory(address, 8))[0]
   def write_memory(self, address, data):         self.command(self.cmd_memcpy(address, self.cmd_data_address(3), len(data)) + data, 0)
-  def write_memory_ptr(self, address, value):    self.write_memory(address, struct.pack('<%s' % self.cmd_arg_type(), value))
+  def write_memory_ptr(self, address, value):
+    self.write_memory(address, struct.pack(f'<{self.cmd_arg_type()}', value))
   def write_memory_uint8(self, address, value):  self.write_memory(address, struct.pack('<B', value))
   def write_memory_uint16(self, address, value): self.write_memory(address, struct.pack('<H', value))
   def write_memory_uint32(self, address, value): self.write_memory(address, struct.pack('<I', value))
@@ -54,8 +57,12 @@ class PwnedUSBDevice():
   def cmd_arg_size(self):                        return 8 if self.platform.arch == 'arm64' else 4
   def cmd_data_offset(self, index):              return 16 + index * self.cmd_arg_size()
   def cmd_data_address(self, index):             return self.load_base() + self.cmd_data_offset(index)
-  def cmd_memcpy(self, dest, src, length):       return struct.pack('<8s8x3%s' % self.cmd_arg_type(), MEMC_MAGIC, dest, src, length)
-  def cmd_memset(self, address, c, length):      return struct.pack('<8s8x3%s' % self.cmd_arg_type(), MEMS_MAGIC, address, c, length)
+  def cmd_memcpy(self, dest, src, length):
+    return struct.pack(f'<8s8x3{self.cmd_arg_type()}', MEMC_MAGIC, dest, src,
+                       length)
+  def cmd_memset(self, address, c, length):
+    return struct.pack(f'<8s8x3{self.cmd_arg_type()}', MEMS_MAGIC, address, c,
+                       length)
 
   def load_base(self):
     if 'SRTG:' in self.serial_number:
@@ -71,12 +78,9 @@ class PwnedUSBDevice():
 
   def usb_serial_number(self, key):
     for pair in self.serial_number.split(' '):
-      if pair.startswith(key + ':'):
+      if pair.startswith(f'{key}:'):
         k,v = pair.split(':')
-        if v[0] == '[' and v[-1] == ']':
-          return v[1:-1]
-        else:
-          return int(v, 16)
+        return v[1:-1] if v[0] == '[' and v[-1] == ']' else int(v, 16)
     return None
 
   def aes(self, data, action, key):

@@ -48,22 +48,16 @@ _logger = logging.getLogger('usb.backend.libusb0')
 if sys.platform.find('bsd') != -1 or sys.platform.find('mac') != -1 or \
         sys.platform.find('darwin') != -1 or sys.platform.find('sunos5') != -1:
     _PATH_MAX = 1024
-elif sys.platform == 'win32' or sys.platform == 'cygwin':
+elif sys.platform in ['win32', 'cygwin']:
     _PATH_MAX = 511
 else:
     _PATH_MAX = os.pathconf('.', 'PC_PATH_MAX')
 
-# libusb-win32 makes all structures packed, while
-# default libusb only does for some structures
-# _PackPolicy defines the structure packing according
-# to the platform.
 class _PackPolicy(object):
     pass
 
-if sys.platform == 'win32' or sys.platform == 'cygwin':
+if sys.platform in ['win32', 'cygwin']:
     _PackPolicy._pack_ = 1
-
-# Data structures
 
 class _usb_descriptor_header(Structure):
     _pack_ = 1
@@ -418,16 +412,15 @@ def _check(ret):
         if hasattr(ret, 'value'):
             ret = ret.value
 
-        if ret < 0:
-            errmsg = _lib.usb_strerror()
-            # No error means that we need to get the error
-            # message from the return code
-            # Thanks to Nicholas Wheeler to point out the problem...
-            # Also see issue #2860940
-            if errmsg.lower() == 'no error':
-                errmsg = os.strerror(-ret)
-        else:
+        if ret >= 0:
             return ret
+        errmsg = _lib.usb_strerror()
+        # No error means that we need to get the error
+        # message from the return code
+        # Thanks to Nicholas Wheeler to point out the problem...
+        # Also see issue #2860940
+        if errmsg.lower() == 'no error':
+            errmsg = os.strerror(-ret)
     raise USBError(errmsg, ret)
 
 def _has_iso_transfer():
@@ -454,7 +447,7 @@ class _LibUSB(usb.backend.IBackend):
     @methodtrace(_logger)
     def get_configuration_descriptor(self, dev, config):
         if config >= dev.descriptor.bNumConfigurations:
-            raise IndexError('Invalid configuration index ' + str(config))
+            raise IndexError(f'Invalid configuration index {str(config)}')
         config_desc = dev.config[config]
         config_desc.extra_descriptors = config_desc.extra[:config_desc.extralen]
         return config_desc
@@ -463,10 +456,10 @@ class _LibUSB(usb.backend.IBackend):
     def get_interface_descriptor(self, dev, intf, alt, config):
         cfgdesc = self.get_configuration_descriptor(dev, config)
         if intf >= cfgdesc.bNumInterfaces:
-            raise IndexError('Invalid interface index ' + str(intf))
+            raise IndexError(f'Invalid interface index {str(intf)}')
         interface = cfgdesc.interface[intf]
         if alt >= interface.num_altsetting:
-            raise IndexError('Invalid alternate setting index ' + str(alt))
+            raise IndexError(f'Invalid alternate setting index {str(alt)}')
         intf_desc = interface.altsetting[alt]
         intf_desc.extra_descriptors = intf_desc.extra[:intf_desc.extralen]
         return intf_desc
@@ -475,7 +468,7 @@ class _LibUSB(usb.backend.IBackend):
     def get_endpoint_descriptor(self, dev, ep, intf, alt, config):
         interface = self.get_interface_descriptor(dev, intf, alt, config)
         if ep >= interface.bNumEndpoints:
-            raise IndexError('Invalid endpoint index ' + str(ep))
+            raise IndexError(f'Invalid endpoint index {str(ep)}')
         ep_desc = interface.endpoint[ep]
         ep_desc.extra_descriptors = ep_desc.extra[:ep_desc.extralen]
         return ep_desc
@@ -561,15 +554,23 @@ class _LibUSB(usb.backend.IBackend):
 
     @methodtrace(_logger)
     def iso_write(self, dev_handle, ep, intf, data, timeout):
-        if not _has_iso_transfer():
-            return usb.backend.IBackend.iso_write(self, dev_handle, ep, intf, data, timeout)
-        return self.__iso_transfer(dev_handle, ep, intf, data, timeout)
+        return (
+            self.__iso_transfer(dev_handle, ep, intf, data, timeout)
+            if _has_iso_transfer()
+            else usb.backend.IBackend.iso_write(
+                self, dev_handle, ep, intf, data, timeout
+            )
+        )
 
     @methodtrace(_logger)
     def iso_read(self, dev_handle, ep, intf, buff, timeout):
-        if not _has_iso_transfer():
-            return usb.backend.IBackend.iso_read(self, dev_handle, ep, intf, buff, timeout)
-        return self.__iso_transfer(dev_handle, ep, intf, buff, timeout)
+        return (
+            self.__iso_transfer(dev_handle, ep, intf, buff, timeout)
+            if _has_iso_transfer()
+            else usb.backend.IBackend.iso_read(
+                self, dev_handle, ep, intf, buff, timeout
+            )
+        )
 
     @methodtrace(_logger)
     def ctrl_transfer(self,
@@ -619,14 +620,9 @@ class _LibUSB(usb.backend.IBackend):
     def __read(self, fn, dev_handle, ep, intf, buff, timeout):
         address, length = buff.buffer_info()
         length *= buff.itemsize
-        ret = int(_check(fn(
-                    dev_handle,
-                    ep,
-                    cast(address, c_char_p),
-                    length,
-                    timeout
-                )))
-        return ret
+        return int(
+            _check(fn(dev_handle, ep, cast(address, c_char_p), length, timeout))
+        )
 
     def __iso_transfer(self, dev_handle, ep, intf, data, timeout):
         context = c_void_p()
@@ -648,11 +644,11 @@ class _LibUSB(usb.backend.IBackend):
                     cast(buff + transmitted, c_char_p),
                     length - transmitted))
 
-                ret = _check(_lib.usb_reap_async(context, timeout))
-                if not ret:
+                if ret := _check(_lib.usb_reap_async(context, timeout)):
+                    transmitted += ret
+                else:
                     return transmitted
 
-                transmitted += ret
         except:
             if not transmitted:
                 raise

