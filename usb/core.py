@@ -142,7 +142,7 @@ class _ResourceManager(object):
             cfg = util.find_descriptor(device, bConfigurationValue=config)
 
         if cfg is None:
-            raise ValueError("Invalid configuration " + str(config))
+            raise ValueError(f"Invalid configuration {str(config)}")
 
         self.managed_open()
         self.backend.set_configuration(self.handle, cfg.bConfigurationValue)
@@ -158,11 +158,7 @@ class _ResourceManager(object):
     def managed_claim_interface(self, device, intf):
         self.managed_open()
 
-        if isinstance(intf, Interface):
-            i = intf.bInterfaceNumber
-        else:
-            i = intf
-
+        i = intf.bInterfaceNumber if isinstance(intf, Interface) else intf
         if i not in self._claimed_intf:
             self.backend.claim_interface(self.handle, i)
             self._claimed_intf.add(i)
@@ -228,7 +224,7 @@ class _ResourceManager(object):
                     self._ep_info[endpoint_address] = (intf, ep)
                     return intf, ep
 
-            raise ValueError('Invalid endpoint address ' + hex(endpoint_address))
+            raise ValueError(f'Invalid endpoint address {hex(endpoint_address)}')
 
     @synchronized
     def get_active_configuration(self, device):
@@ -348,10 +344,10 @@ class Endpoint(object):
             )
 
     def __repr__(self):
-        return "<" + self._str() + ">"
+        return f"<{self._str()}>"
 
     def __str__(self):
-        headstr = "      " + self._str() + " "
+        headstr = f"      {self._str()} "
 
         if util.endpoint_direction(self.bEndpointAddress) == util.ENDPOINT_IN:
             direction = "IN"
@@ -359,19 +355,19 @@ class Endpoint(object):
             direction = "OUT"
 
         return "%s%s\n" % (headstr, "=" * (60 - len(headstr))) + \
-        "       %-17s:%#7x (7 bytes)\n" % (
+            "       %-17s:%#7x (7 bytes)\n" % (
                 "bLength", self.bLength) + \
-        "       %-17s:%#7x %s\n" % (
+            "       %-17s:%#7x %s\n" % (
                 "bDescriptorType", self.bDescriptorType,
                 _try_lookup(_lu.descriptors, self.bDescriptorType)) + \
-        "       %-17s:%#7x %s\n" % (
+            "       %-17s:%#7x %s\n" % (
                 "bEndpointAddress", self.bEndpointAddress, direction) + \
-        "       %-17s:%#7x %s\n" % (
+            "       %-17s:%#7x %s\n" % (
                 "bmAttributes", self.bmAttributes,
                 _lu.ep_attributes[(self.bmAttributes & 0x3)]) + \
-        "       %-17s:%#7x (%d bytes)\n" % (
+            "       %-17s:%#7x (%d bytes)\n" % (
                 "wMaxPacketSize", self.wMaxPacketSize, self.wMaxPacketSize) + \
-        "       %-17s:%#7x" % ("bInterval", self.bInterval)
+            "       %-17s:%#7x" % ("bInterval", self.bInterval)
 
     def write(self, data, timeout = None):
         r"""Write data to the endpoint.
@@ -478,7 +474,7 @@ class Interface(object):
             )
 
     def __repr__(self):
-        return "<" + self._str() + ">"
+        return f"<{self._str()}>"
 
     def __str__(self):
         """Show all information for the interface."""
@@ -518,37 +514,33 @@ class Interface(object):
                 self.configuration)
 
     def _str(self):
-        if self.bAlternateSetting:
-            alt_setting = ", %d" % self.bAlternateSetting
-        else:
-            alt_setting = ""
-
+        alt_setting = ", %d" % self.bAlternateSetting if self.bAlternateSetting else ""
         return "INTERFACE %d%s: %s" % (self.bInterfaceNumber, alt_setting,
             _try_lookup(_lu.interface_classes, self.bInterfaceClass,
                 default = "Unknown Class"))
 
     def _get_full_descriptor_str(self):
-        headstr = "    " + self._str() + " "
+        headstr = f"    {self._str()} "
         return "%s%s\n" % (headstr, "=" * (60 - len(headstr))) + \
-        "     %-19s:%#7x (9 bytes)\n" % (
+            "     %-19s:%#7x (9 bytes)\n" % (
             "bLength", self.bLength) + \
-        "     %-19s:%#7x %s\n" % (
+            "     %-19s:%#7x %s\n" % (
             "bDescriptorType", self.bDescriptorType,
             _try_lookup(_lu.descriptors, self.bDescriptorType)) + \
-        "     %-19s:%#7x\n" % (
+            "     %-19s:%#7x\n" % (
             "bInterfaceNumber", self.bInterfaceNumber) + \
-        "     %-19s:%#7x\n" % (
+            "     %-19s:%#7x\n" % (
             "bAlternateSetting", self.bAlternateSetting) + \
-        "     %-19s:%#7x\n" % (
+            "     %-19s:%#7x\n" % (
             "bNumEndpoints", self.bNumEndpoints) + \
-        "     %-19s:%#7x %s\n" % (
+            "     %-19s:%#7x %s\n" % (
             "bInterfaceClass", self.bInterfaceClass,
             _try_lookup(_lu.interface_classes, self.bInterfaceClass)) + \
-        "     %-19s:%#7x\n" % (
+            "     %-19s:%#7x\n" % (
             "bInterfaceSubClass", self.bInterfaceSubClass) + \
-        "     %-19s:%#7x\n" % (
+            "     %-19s:%#7x\n" % (
             "bInterfaceProtocol", self.bInterfaceProtocol) + \
-        "     %-19s:%#7x %s" % (
+            "     %-19s:%#7x %s" % (
             "iInterface", self.iInterface,
             _try_get_string(self.device, self.iInterface))
 
@@ -603,7 +595,7 @@ class Configuration(object):
             )
 
     def __repr__(self):
-        return "<" + self._str() + ">"
+        return f"<{self._str()}>"
 
     def __str__(self):
         string = self._get_full_descriptor_str()
@@ -647,37 +639,29 @@ class Configuration(object):
             _lu.MAX_POWER_UNITS_USB2p0 * self.bMaxPower)
 
     def _get_full_descriptor_str(self):
-        headstr = "  " + self._str() + " "
-        if self.bmAttributes & (1<<6):
-            powered = "Self"
-        else:
-            powered = "Bus"
-
-        if self.bmAttributes & (1<<5):
-            remote_wakeup = ", Remote Wakeup"
-        else:
-            remote_wakeup = ""
-
+        headstr = f"  {self._str()} "
+        powered = "Self" if self.bmAttributes & (1<<6) else "Bus"
+        remote_wakeup = ", Remote Wakeup" if self.bmAttributes & (1<<5) else ""
         return "%s%s\n" % (headstr, "=" * (60 - len(headstr))) + \
-        "   %-21s:%#7x (9 bytes)\n" % (
+            "   %-21s:%#7x (9 bytes)\n" % (
             "bLength", self.bLength) + \
-        "   %-21s:%#7x %s\n" % (
+            "   %-21s:%#7x %s\n" % (
             "bDescriptorType", self.bDescriptorType,
             _try_lookup(_lu.descriptors, self.bDescriptorType)) + \
-        "   %-21s:%#7x (%d bytes)\n" % (
+            "   %-21s:%#7x (%d bytes)\n" % (
             "wTotalLength", self.wTotalLength, self.wTotalLength) + \
-        "   %-21s:%#7x\n" % (
+            "   %-21s:%#7x\n" % (
             "bNumInterfaces", self.bNumInterfaces) + \
-        "   %-21s:%#7x\n" % (
+            "   %-21s:%#7x\n" % (
             "bConfigurationValue", self.bConfigurationValue) + \
-        "   %-21s:%#7x %s\n" % (
+            "   %-21s:%#7x %s\n" % (
             "iConfiguration", self.iConfiguration,
             _try_get_string(self.device, self.iConfiguration)) + \
-        "   %-21s:%#7x %s Powered%s\n" % (
+            "   %-21s:%#7x %s Powered%s\n" % (
             "bmAttributes", self.bmAttributes, powered, remote_wakeup
             # bit 7 is high, bit 4..0 are 0
             ) + \
-        "   %-21s:%#7x (%d mA)" % (
+            "   %-21s:%#7x (%d mA)" % (
             "bMaxPower", self.bMaxPower,
             _lu.MAX_POWER_UNITS_USB2p0 * self.bMaxPower)
             # FIXME : add a check for superspeed vs usb 2.0
@@ -719,7 +703,7 @@ class Device(_objfinalizer.AutoFinalizedObject):
     """
 
     def __repr__(self):
-        return "<" + self._str() + ">"
+        return f"<{self._str()}>"
 
     def __str__(self):
         string = self._get_full_descriptor_str()
@@ -780,25 +764,10 @@ class Device(_objfinalizer.AutoFinalizedObject):
                 )
             )
 
-        if desc.bus is not None:
-            self.bus = int(desc.bus)
-        else:
-            self.bus = None
-
-        if desc.address is not None:
-            self.address = int(desc.address)
-        else:
-            self.address = None
-
-        if desc.port_number is not None:
-            self.port_number = int(desc.port_number)
-        else:
-            self.port_number = None
-
-        if desc.speed is not None:
-            self.speed = int(desc.speed)
-        else:
-            self.speed = None
+        self.bus = int(desc.bus) if desc.bus is not None else None
+        self.address = int(desc.address) if desc.address is not None else None
+        self.port_number = None if desc.port_number is None else int(desc.port_number)
+        self.speed = int(desc.speed) if desc.speed is not None else None
 
     @property
     def langids(self):
@@ -1101,9 +1070,7 @@ class Device(_objfinalizer.AutoFinalizedObject):
         self._ctx.dispose(self)
 
     def __get_timeout(self, timeout):
-        if timeout is not None:
-            return timeout
-        return self.__default_timeout
+        return timeout if timeout is not None else self.__default_timeout
 
     def __set_def_tmo(self, tmo):
         if tmo < 0:
@@ -1118,53 +1085,45 @@ class Device(_objfinalizer.AutoFinalizedObject):
             self.idVendor, self.idProduct, self.bus, self.address)
 
     def _get_full_descriptor_str(self):
-        headstr = self._str() + " "
+        headstr = f"{self._str()} "
 
-        if self.bcdUSB & 0xf:
-            low_bcd_usb = str(self.bcdUSB & 0xf)
-        else:
-            low_bcd_usb = ""
-
-        if self.bcdDevice & 0xf:
-            low_bcd_device = str(self.bcdDevice & 0xf)
-        else:
-            low_bcd_device = ""
-
+        low_bcd_usb = str(self.bcdUSB & 0xf) if self.bcdUSB & 0xf else ""
+        low_bcd_device = str(self.bcdDevice & 0xf) if self.bcdDevice & 0xf else ""
         return "%s%s\n" %  (headstr, "=" * (60 - len(headstr))) + \
-        " %-23s:%#7x (18 bytes)\n" % (
+            " %-23s:%#7x (18 bytes)\n" % (
             "bLength", self.bLength) + \
-        " %-23s:%#7x %s\n" % (
+            " %-23s:%#7x %s\n" % (
             "bDescriptorType", self.bDescriptorType,
             _try_lookup(_lu.descriptors, self.bDescriptorType)) + \
-        " %-23s:%#7x USB %d.%d%s\n" % (
+            " %-23s:%#7x USB %d.%d%s\n" % (
             "bcdUSB", self.bcdUSB, (self.bcdUSB & 0xff00)>>8,
             (self.bcdUSB & 0xf0) >> 4, low_bcd_usb) + \
-        " %-23s:%#7x %s\n" % (
+            " %-23s:%#7x %s\n" % (
             "bDeviceClass", self.bDeviceClass,
             _try_lookup(_lu.device_classes, self.bDeviceClass)) + \
-        " %-23s:%#7x\n" % (
+            " %-23s:%#7x\n" % (
             "bDeviceSubClass", self.bDeviceSubClass) + \
-        " %-23s:%#7x\n" % (
+            " %-23s:%#7x\n" % (
             "bDeviceProtocol", self.bDeviceProtocol) + \
-        " %-23s:%#7x (%d bytes)\n" % (
+            " %-23s:%#7x (%d bytes)\n" % (
             "bMaxPacketSize0", self.bMaxPacketSize0, self.bMaxPacketSize0) + \
-        " %-23s: %#06x\n" % (
+            " %-23s: %#06x\n" % (
             "idVendor", self.idVendor) + \
-        " %-23s: %#06x\n" % (
+            " %-23s: %#06x\n" % (
             "idProduct", self.idProduct) + \
-        " %-23s:%#7x Device %d.%d%s\n" % (
+            " %-23s:%#7x Device %d.%d%s\n" % (
             "bcdDevice", self.bcdDevice, (self.bcdDevice & 0xff00)>>8,
             (self.bcdDevice & 0xf0) >> 4, low_bcd_device) + \
-        " %-23s:%#7x %s\n" % (
+            " %-23s:%#7x %s\n" % (
             "iManufacturer", self.iManufacturer,
             _try_get_string(self, self.iManufacturer)) + \
-        " %-23s:%#7x %s\n" % (
+            " %-23s:%#7x %s\n" % (
             "iProduct", self.iProduct,
             _try_get_string(self, self.iProduct)) + \
-        " %-23s:%#7x %s\n" % (
+            " %-23s:%#7x %s\n" % (
             "iSerialNumber", self.iSerialNumber,
             _try_get_string(self, self.iSerialNumber)) + \
-        " %-23s:%#7x" % (
+            " %-23s:%#7x" % (
             "bNumConfigurations", self.bNumConfigurations)
 
     default_timeout = property(
@@ -1264,11 +1223,10 @@ def find(find_all=False, backend = None, custom_match = None, **args):
 
     if find_all:
         return device_iter(**args)
-    else:
-        try:
-            return _interop._next(device_iter(**args))
-        except StopIteration:
-            return None
+    try:
+        return _interop._next(device_iter(**args))
+    except StopIteration:
+        return None
 
 def show_devices(verbose=False, **kwargs):
     """Show information about connected devices.
@@ -1278,12 +1236,12 @@ def show_devices(verbose=False, **kwargs):
     """
     kwargs["find_all"] = True
     devices = find(**kwargs)
-    strings = ""
-    for device in devices:
-        if not verbose:
-            strings +=  "%s, %s\n" % (device._str(), _try_lookup(
-                _lu.device_classes, device.bDeviceClass))
-        else:
-            strings += "%s\n\n" % str(device)
+    strings = "".join(
+        "%s\n\n" % str(device)
+        if verbose
+        else "%s, %s\n"
+        % (device._str(), _try_lookup(_lu.device_classes, device.bDeviceClass))
+        for device in devices
+    )
 
     return _DescriptorInfo(strings)

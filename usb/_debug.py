@@ -41,11 +41,14 @@ def enable_tracing(enable):
 
 def _trace_function_call(logger, fname, *args, **named_args):
     logger.debug(
-                # TODO: check if 'f' is a method or a free function
-                fname + '(' + \
-                ', '.join((str(val) for val in args)) + \
-                ', '.join((name + '=' + str(val) for name, val in named_args.items())) + ')'
+        (
+            (f'{fname}(' + ', '.join((str(val) for val in args)))
+            + ', '.join(
+                f'{name}={str(val)}' for name, val in named_args.items()
             )
+            + ')'
+        )
+    )
 
 # decorator for methods calls tracing
 def methodtrace(logger):
@@ -55,11 +58,13 @@ def methodtrace(logger):
         def do_trace(*args, **named_args):
             # this if is just a optimization to avoid unecessary string formatting
             if logging.DEBUG >= logger.getEffectiveLevel():
-                fn = type(args[0]).__name__ + '.' + f.__name__
+                fn = f'{type(args[0]).__name__}.{f.__name__}'
                 _trace_function_call(logger, fn, *args[1:], **named_args)
             return f(*args, **named_args)
+
         _interop._update_wrapper(do_trace, f)
         return do_trace
+
     return decorator_logging
 
 # decorator for methods calls tracing

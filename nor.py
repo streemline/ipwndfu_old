@@ -13,12 +13,15 @@ class NorData():
         self.firmware_offset = self.block_size * firmware_block
         self.firmware_length = self.block_size * firmware_block_count
         self.parts = [
-          dump[0:52],
-          dump[52:512],
-          dump[512:self.firmware_offset],
-          dump[self.firmware_offset:self.firmware_offset + self.firmware_length],
-          dump[self.firmware_offset + self.firmware_length:]
+            dump[:52],
+            dump[52:512],
+            dump[512 : self.firmware_offset],
+            dump[
+                self.firmware_offset : self.firmware_offset + self.firmware_length
+            ],
+            dump[self.firmware_offset + self.firmware_length :],
         ]
+
 
         self.images = []
         offset = 0

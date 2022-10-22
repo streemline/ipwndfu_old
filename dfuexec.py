@@ -177,7 +177,18 @@ class PwnedDFUDevice():
         return data
 
     def write_memory(self, address, data):
-        (retval, data) = self.execute(struct.pack('<4I%ss' % len(data), self.config.memmove, address, self.config.load_address + 20, len(data), data), 0)
+        (retval, data) = self.execute(
+            struct.pack(
+                f'<4I{len(data)}s',
+                self.config.memmove,
+                address,
+                self.config.load_address + 20,
+                len(data),
+                data,
+            ),
+            0,
+        )
+
         return data
 
     def nor_dump(self, saveBackup):
@@ -291,11 +302,10 @@ class PwnedDFUDevice():
         KEYBAG_LENGTH = 48
         assert len(keybag) == KEYBAG_LENGTH
 
-        KEYBAG_FILENAME = 'aes-keys/S5L%s-firmware' % self.config.cpid
+        KEYBAG_FILENAME = f'aes-keys/S5L{self.config.cpid}-firmware'
         try:
-            f = open(KEYBAG_FILENAME, 'rb')
-            data = f.read()
-            f.close()
+            with open(KEYBAG_FILENAME, 'rb') as f:
+                data = f.read()
         except IOError:
             data = str()
         assert len(data) % 2 * KEYBAG_LENGTH == 0
@@ -307,8 +317,6 @@ class PwnedDFUDevice():
         device = PwnedDFUDevice()
         decrypted_keybag = device.aes(keybag, AES_DECRYPT, AES_GID_KEY)
 
-        f = open(KEYBAG_FILENAME, 'a')
-        f.write(keybag + decrypted_keybag)
-        f.close()
-
+        with open(KEYBAG_FILENAME, 'a') as f:
+            f.write(keybag + decrypted_keybag)
         return decrypted_keybag

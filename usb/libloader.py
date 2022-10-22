@@ -64,7 +64,7 @@ class LibraryMissingSymbolsException(LibraryException):
     pass
 
 
-def locate_library (candidates, find_library=ctypes.util.find_library):
+def locate_library(candidates, find_library=ctypes.util.find_library):
     """Tries to locate a library listed in candidates using the given
     find_library() function (or ctypes.util.find_library).
     Returns the first library found, which can be the library's name
@@ -92,8 +92,7 @@ def locate_library (candidates, find_library=ctypes.util.find_library):
         if use_dll_workaround:
             candidate += '.dll'
 
-        libname = find_library(candidate)
-        if libname:
+        if libname := find_library(candidate):
             return libname
     # -- end for
     return None
@@ -110,16 +109,9 @@ def load_library(lib, name=None, lib_cls=None):
     * lib_cls    -- library class. Defaults to None (-> ctypes.CDLL).
     """
     try:
-        if lib_cls:
-            return lib_cls(lib)
-        else:
-            return ctypes.CDLL(lib)
+        return lib_cls(lib) if lib_cls else ctypes.CDLL(lib)
     except Exception:
-        if name:
-            lib_msg = '%s (%s)' % (name, lib)
-        else:
-            lib_msg = lib
-
+        lib_msg = f'{name} ({lib})' if name else lib
         lib_msg += ' could not be loaded'
 
         if sys.platform == 'cygwin':
@@ -156,12 +148,11 @@ def load_locate_library(candidates, cygwin_lib, name,
     * LibraryNotLoadedException
     * LibraryMissingSymbolsException
     """
-    if sys.platform == 'cygwin':
-        if cygwin_lib:
-            loaded_lib = load_library(cygwin_lib, name, cygwin_cls)
-        else:
-            raise NoLibraryCandidatesException(name)
-    elif candidates:
+    if sys.platform == 'cygwin' and cygwin_lib:
+        loaded_lib = load_library(cygwin_lib, name, cygwin_cls)
+    elif sys.platform == 'cygwin' or not candidates:
+        raise NoLibraryCandidatesException(name)
+    else:
         lib = locate_library(candidates, find_library)
         if lib:
             if sys.platform == 'win32':
@@ -171,16 +162,12 @@ def load_locate_library(candidates, cygwin_lib, name,
         else:
             _LOGGER.error('%r could not be found', (name or candidates))
             raise LibraryNotFoundException(name)
-    else:
-        raise NoLibraryCandidatesException(name)
-
     if loaded_lib is None:
         raise LibraryNotLoadedException(name)
     elif check_symbols:
-        symbols_missing = [
-                    s for s in check_symbols if not hasattr(loaded_lib, s)
-        ]
-        if symbols_missing:
+        if symbols_missing := [
+            s for s in check_symbols if not hasattr(loaded_lib, s)
+        ]:
             msg = ('%r, missing symbols: %r', lib, symbols_missing )
             _LOGGER.error(msg)
             raise LibraryMissingSymbolsException(lib)

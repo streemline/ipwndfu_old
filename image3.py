@@ -3,7 +3,14 @@ import dfuexec, utilities
 
 class Image3:
     def __init__(self, data):
-        (self.magic, self.totalSize, self.dataSize, self.signedSize, self.type) = struct.unpack('4s3I4s', data[0:20])
+        (
+            self.magic,
+            self.totalSize,
+            self.dataSize,
+            self.signedSize,
+            self.type,
+        ) = struct.unpack('4s3I4s', data[:20])
+
         self.tags = []
         pos = 20
         while pos < 20 + self.dataSize:
@@ -34,11 +41,7 @@ class Image3:
         return bytes + '\x00' * (totalSize - len(bytes))
 
     def getTags(self, magic):
-        matches = []
-        for tag in self.tags:
-            if tag[0] == magic:
-                matches.append(tag)
-        return matches
+        return [tag for tag in self.tags if tag[0] == magic]
 
     def getKeybag(self):
         keybags = self.getTags('KBAG'[::-1])

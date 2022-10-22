@@ -107,7 +107,8 @@ def generate_shellcode(constants):
     (value,) = struct.unpack('<I', shellcode[offset:offset + 4])
     assert value == 0xBAD00001 + i
 
-  return shellcode[:placeholders_offset] + struct.pack('<%sI' % len(constants), *constants)
+  return shellcode[:placeholders_offset] + struct.pack(f'<{len(constants)}I', *
+                                                       constants)
 
 def exploit():
   print '*** based on steaks4uce exploit (heap overflow) by pod2g ***'
